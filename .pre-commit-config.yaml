@@ -15,13 +15,11 @@ repos:
     rev: 1.6.1
     hooks:
       - id: poetry-check
+        always_run: true
       - id: poetry-lock
+        always_run: true
       - id: poetry-export
-        args: [
-          "--without=dev,optional",
-          "-f", "requirements.txt",
-          "-o", "requirements.txt"
-        ]
+        always_run: true
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.6.0
     hooks:
