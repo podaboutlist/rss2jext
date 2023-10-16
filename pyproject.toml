@@ -20,7 +20,6 @@ pre-commit = "^3.5.0"
 mypy = "^1.6.0"
 types-requests = "^2.31.0.9"
 
-
 [tool.poetry.group.optional.dependencies]
 poethepoet = "^0.24.1"
 
@@ -33,3 +32,34 @@ src = ["src"]
 
 [tool.ruff.format]
 line-ending = "lf"
+
+[tool.poe.tasks]
+lint.sequence = [
+    { cmd = "mypy src/" },
+    { cmd = "ruff check --verbose src/" },
+    { cmd = "black --check --verbose src/" }
+]
+lint.ignore_fail = "return_non_zero"
+test-docker.sequence = [
+    "clean",
+    "build-docker-local",
+    "fix-permissions"
+]
+
+[tool.poe.tasks.clean]
+cmd = """
+  find ./data/tmp -type f \
+    \\( -iname '*.mp3' -o -iname '*.ogg' \\) \
+    -exec rm --verbose --interactive=never {} +
+"""
+
+[tool.poe.tasks.build-docker-local]
+shell = """
+  docker build . --file Dockerfile --tag rss2jext && \
+  docker container rm rss2jext; \
+  docker run --env-file ./.env --volume './data:/app/data' --name rss2jext rss2jext
+"""
+
+# Running docker with `--volume` will chown any new files in data/ to root:root
+[tool.poe.tasks.fix-permissions]
+cmd = "sudo chown --verbose -R $USER ./data"
