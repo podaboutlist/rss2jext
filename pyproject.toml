@@ -17,10 +17,12 @@ python-ffmpeg = "^2.0.4"
 black = "^23.9.1"
 ruff = "^0.0.292"
 pre-commit = "^3.5.0"
+mypy = "^1.6.0"
+types-requests = "^2.31.0.9"
 
 [tool.ruff]
-select = ["B", "D", "E", "F", "I", "N", "S", "W", "UP"]
-ignore = ["D211", "D213", "D400"]
+select = ["B", "D", "E", "F", "I", "N", "S", "W", "UP", "TCH"]
+ignore = ["D103", "D211", "D213", "D400"]
 line-length = 88
 target-version = "py311"
 src = ["src"]

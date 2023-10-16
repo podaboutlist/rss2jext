@@ -14,7 +14,7 @@ from pterodactyl.api import Client
 __cwd__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 # TODO: Pull version string from pyproject.toml
-user_agent = "rss2jext/1.0.0"
+USER_AGENT = "rss2jext/1.0.0"
 
 
 def load_servers() -> dict:
@@ -27,7 +27,7 @@ def load_servers() -> dict:
 def rss_latest_episode(feed_url: str) -> Tag[Item]:
     # TODO: Validate RSS_URL
     # TODO: Don't hardcode timeout value
-    feed_req = requests.get(feed_url, timeout=1000, headers={"User-Agent": user_agent})
+    feed_req = requests.get(feed_url, timeout=1000, headers={"User-Agent": USER_AGENT})
     feed_req.raise_for_status()
 
     rss = Parser.parse(feed_req.text)
@@ -59,15 +59,14 @@ def rss_latest_episode(feed_url: str) -> Tag[Item]:
 
 
 def extract_mp3_url(episode: Item) -> str:
-    attrs = json.loads(episode.enclosure.attributes.replace("'", '"'))
-    return attrs.url
+    return episode.enclosure.attributes["url"]
 
 
 # TODO: Maybe add an extra argument to this that lets us specify where to save the file
 def download_mp3(url: str):
     # TODO: Don't hardcode timeout
     req = requests.get(
-        url, headers={"User-Agent": user_agent}, timeout=1000, stream=True
+        url, headers={"User-Agent": USER_AGENT}, timeout=1000, stream=True
     )
 
     req.raise_for_status()
