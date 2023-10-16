@@ -1,0 +1,55 @@
+name: Lint Python
+
+on: [push, pull_request]
+
+jobs:
+  lint-python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+        poetry-version: ["1.6.1"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: ${{ matrix.poetry-version }}
+
+      - name: Configure Poetry to use local virtualenv
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - name: Cache local virtualenv
+        uses: actions/cache@v3
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Install dependencies
+        run: poetry install --without dev --no-root --no-directory
+
+      # May need to set up mypy.ini for this to work properly
+      - name: MyPy
+        uses: jpetrucciani/mypy-check@master
+        with:
+          path: "./src"
+
+      - name: Ruff
+        uses: chartboost/ruff-action@v1
+        with:
+          args: "--config ./pyproject.toml"
+          src: "./src"
+
+      - name: Black
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./src"
