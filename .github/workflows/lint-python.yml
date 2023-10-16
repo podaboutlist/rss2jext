@@ -34,22 +34,14 @@ jobs:
           key: venv-${{ hashFiles('poetry.lock') }}
 
       - name: Install dependencies
-        run: poetry install --without dev --no-root --no-directory
+        run: poetry install --no-root --no-directory
 
       # May need to set up mypy.ini for this to work properly
       - name: MyPy
-        uses: jpetrucciani/mypy-check@master
-        with:
-          path: "./src"
+        run: poetry run mypy ./src
 
       - name: Ruff
-        uses: chartboost/ruff-action@v1
-        with:
-          args: "--config ./pyproject.toml"
-          src: "./src"
+        run: poetry run ruff check --output-format github src/
 
       - name: Black
-        uses: psf/black@stable
-        with:
-          options: "--check --verbose"
-          src: "./src"
+        run: poetry run black --check src/
