@@ -6,27 +6,25 @@ import requests
 from dotenv import load_dotenv
 from ffmpeg import FFmpeg, Progress
 from rss_parser import Parser
+from rss_parser.models.item import Item
+from rss_parser.models.types.tag import Tag
 
 from pterodactyl.api import Client
 
 __cwd__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
+# TODO: Pull version string from pyproject.toml
+user_agent = "rss2jext/1.0.0"
 
-def main() -> None:
-    load_dotenv()
 
-    feed_url = os.getenv("RSS_URL")
-
-    servers = None
-
+def load_servers() -> dict:
     with open(
         os.path.join(__cwd__, "data", "servers.json"), encoding="utf-8"
     ) as servers_json:
-        servers = json.load(servers_json)
+        return json.load(servers_json)
 
-    # TODO: Pull version string from pyproject.toml
-    user_agent = "rss2jext/1.0.0"
 
+def rss_latest_episode(feed_url: str) -> Tag[Item]:
     # TODO: Validate RSS_URL
     # TODO: Don't hardcode timeout value
     feed_req = requests.get(feed_url, timeout=1000, headers={"User-Agent": user_agent})
@@ -38,48 +36,49 @@ def main() -> None:
     print(f"[RSS] Feed version: {rss.version}")
 
     rss_items = rss.channel.items
+    # The feed is ordered by date ascending so the newest episodes are at the end
+    # of rss_items
     rss_items.reverse()
 
-    latest_full_episode = None
     i = 0
 
+    # TODO: Check the number of items in rss_items before entering this loop
     while True:
         i = i + 1
 
         latest_rss_item = rss_items.pop()
         title = latest_rss_item.title.lower()
 
+        # TODO: Make this filter customizable
         if not title.startswith("teaser"):
-            latest_full_episode = latest_rss_item
-            break
+            return latest_rss_item
 
+        # HACK: Find a better way of handling this edge case
         if i > 5:  # abort after 5 iterations so we're not here all day
             raise RuntimeError("Could not find a non-teaser episode after 5 tries.")
 
-    print(f"[RSS] Latest episode Title: {latest_full_episode.title}")
-    print(f"[RSS] Latest episode GUID: {latest_full_episode.guid}")
 
-    ep_url = json.loads(
-        str(latest_full_episode.enclosure.attributes).replace("'", '"')
-    )["url"]
+def extract_mp3_url(episode: Item) -> str:
+    attrs = json.loads(episode.enclosure.attributes.replace("'", '"'))
+    return attrs.url
 
-    print(f"[RSS] Latest episode URL: {ep_url}")
 
-    ep_raw = requests.get(
-        ep_url, headers={"User-Agent": user_agent}, timeout=1000, stream=True
+# TODO: Maybe add an extra argument to this that lets us specify where to save the file
+def download_mp3(url: str):
+    # TODO: Don't hardcode timeout
+    req = requests.get(
+        url, headers={"User-Agent": user_agent}, timeout=1000, stream=True
     )
 
-    ep_raw.raise_for_status()
-
-    print("[RSS] Downloading episode file", end="")
+    req.raise_for_status()
 
     with open(os.path.join(__cwd__, "data", "out", "episode.mp3"), "wb") as outfile:
         # not sure if there's a better value for chunk_size
-        for chunk in ep_raw.iter_content(chunk_size=1024):
+        for chunk in req.iter_content(chunk_size=1024):
             outfile.write(chunk)
 
-    print("[RSS] Finished downloading episode file!")
 
+def mp3_to_ogg(infile: str, verbose=False):
     # Re-encode the audio file using ffmpeg
     # ffmpeg flags to reproduce the format of vanilla records appear to be
     #   -c:a libvorbis -q:a 2 -ar 44100 -ac 1
@@ -87,7 +86,7 @@ def main() -> None:
     ffmpeg = (
         FFmpeg()
         .option("y")
-        .input(os.path.join(__cwd__, "data", "out", "episode.mp3"))
+        .input(infile)
         .output(
             os.path.join(__cwd__, "data", "out", "episode.ogg"),
             {"codec:a": "libvorbis", "qscale:a": 2, "ar": 44100, "ac": 1},
@@ -96,10 +95,33 @@ def main() -> None:
 
     @ffmpeg.on("progress")
     def on_progress(progress: Progress) -> None:
-        print(f"[ffmpeg] {progress}")
+        if verbose:
+            print(f"[ffmpeg] {progress}")
+
+    ffmpeg.execute()
+
+
+def main() -> None:
+    load_dotenv()
+
+    episode = rss_latest_episode(os.getenv("RSS_URL"))
+    servers = load_servers()
+
+    print(f"[RSS] Latest episode Title: {episode.title}")
+    print(f"[RSS] Latest episode GUID: {episode.guid}")
+
+    ep_url = extract_mp3_url(episode=episode)
+
+    print(f"[RSS] Latest episode URL: {ep_url}")
+
+    print("[RSS] Downloading episode mp3...")
+
+    download_mp3(ep_url)
+
+    print("[RSS] Finished downloading episode file!")
 
     print("[ffmpeg] encoding mp3 -> ogg")
-    ffmpeg.execute()
+    mp3_to_ogg(os.path.join(__cwd__, "data", "out", "episode.mp3"))
 
 
 if __name__ == "__main__":
