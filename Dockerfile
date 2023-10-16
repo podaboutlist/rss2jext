@@ -1,4 +1,4 @@
-from python:3.11-alpine
+FROM python:3.11-alpine
 
 #ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=true
