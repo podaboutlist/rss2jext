@@ -12,6 +12,7 @@ from rss_parser.models.types.tag import Tag
 from pterodactyl.api import Client
 
 __cwd__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+__data_dir__ = os.path.realpath(os.path.join(__cwd__, "../data"))
 
 # TODO: Pull version string from pyproject.toml
 USER_AGENT = "rss2jext/1.0.0"
@@ -19,12 +20,14 @@ USER_AGENT = "rss2jext/1.0.0"
 
 def load_servers() -> dict:
     with open(
-        os.path.join(__cwd__, "data", "servers.json"), encoding="utf-8"
+        os.path.join(__data_dir__, "servers.json"), encoding="utf-8"
     ) as servers_json:
         return json.load(servers_json)
 
 
 def rss_latest_episode(feed_url: str) -> Tag[Item]:
+    print(f"[RSS] Downloading feed from {feed_url}...")
+
     # TODO: Validate RSS_URL
     # TODO: Don't hardcode timeout value
     feed_req = requests.get(feed_url, timeout=1000, headers={"User-Agent": USER_AGENT})
@@ -63,7 +66,7 @@ def extract_mp3_url(episode: Item) -> str:
 
 
 # TODO: Maybe add an extra argument to this that lets us specify where to save the file
-def download_mp3(url: str):
+def download_mp3(url: str) -> str:
     # TODO: Don't hardcode timeout
     req = requests.get(
         url, headers={"User-Agent": USER_AGENT}, timeout=1000, stream=True
@@ -71,13 +74,18 @@ def download_mp3(url: str):
 
     req.raise_for_status()
 
-    with open(os.path.join(__cwd__, "data", "tmp", "episode.mp3"), "wb") as outfile:
+    outfile = os.path.join(__data_dir__, "tmp", "episode.mp3")
+
+    with open(outfile, "wb") as of:
         # not sure if there's a better value for chunk_size
         for chunk in req.iter_content(chunk_size=1024):
-            outfile.write(chunk)
+            of.write(chunk)
+
+        return outfile
 
 
-def mp3_to_ogg(infile: str, verbose=False):
+def mp3_to_ogg(infile: str, verbose=False) -> str:
+    outfile = os.path.join(__data_dir__, "tmp", "episode.ogg")
     # Re-encode the audio file using ffmpeg
     # ffmpeg flags to reproduce the format of vanilla records appear to be
     #   -c:a libvorbis -q:a 2 -ar 44100 -ac 1
@@ -87,17 +95,19 @@ def mp3_to_ogg(infile: str, verbose=False):
         .option("y")
         .input(infile)
         .output(
-            os.path.join(__cwd__, "data", "tmp", "episode.ogg"),
+            outfile,
             {"codec:a": "libvorbis", "qscale:a": 2, "ar": 44100, "ac": 1},
         )
     )
 
-    @ffmpeg.on("progress")
-    def on_progress(progress: Progress) -> None:
-        if verbose:
-            print(f"[ffmpeg] {progress}")
+    # @ffmpeg.on("progress")
+    # def on_progress(progress: Progress) -> None:
+    #     if verbose:
+    #         print(f"[ffmpeg] {progress}")
 
     ffmpeg.execute()
+
+    return outfile
 
 
 def main() -> None:
@@ -115,12 +125,13 @@ def main() -> None:
 
     print("[RSS] Downloading episode mp3...")
 
-    download_mp3(ep_url)
+    mp3_file = download_mp3(ep_url)
 
     print("[RSS] Finished downloading episode file!")
 
-    print("[ffmpeg] encoding mp3 -> ogg")
-    mp3_to_ogg(os.path.join(__cwd__, "data", "out", "episode.mp3"))
+    print(f"[ffmpeg] encoding {mp3_file} -> ogg")
+    ogg_file = mp3_to_ogg(mp3_file)
+    print(f"[ffmpeg] done: {ogg_file}")
 
 
 if __name__ == "__main__":

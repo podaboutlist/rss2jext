@@ -20,6 +20,10 @@ pre-commit = "^3.5.0"
 mypy = "^1.6.0"
 types-requests = "^2.31.0.9"
 
+
+[tool.poetry.group.optional.dependencies]
+poethepoet = "^0.24.1"
+
 [tool.ruff]
 select = ["B", "D", "E", "F", "I", "N", "S", "W", "UP", "TCH"]
 ignore = ["D103", "D211", "D213", "D400"]
