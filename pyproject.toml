@@ -23,6 +23,8 @@ types-requests = "^2.31.0.9"
 [tool.poetry.group.optional.dependencies]
 poethepoet = "^0.24.1"
 
+# Ruff ------------------------------------------------------------------------
+
 [tool.ruff]
 select = ["B", "D", "E", "F", "I", "N", "S", "W", "UP", "TCH"]
 ignore = ["D103", "D211", "D213", "D400"]
@@ -33,11 +35,13 @@ src = ["src"]
 [tool.ruff.format]
 line-ending = "lf"
 
+# PoeThePoet ------------------------------------------------------------------
+
 [tool.poe.tasks]
 lint.sequence = [
-    { cmd = "mypy src/" },
-    { cmd = "ruff check --verbose src/" },
-    { cmd = "black --check --verbose src/" }
+    "mypy",
+    "ruff",
+    "black"
 ]
 lint.ignore_fail = "return_non_zero"
 test-docker.sequence = [
@@ -45,6 +49,15 @@ test-docker.sequence = [
     "build-docker-local",
     "fix-permissions"
 ]
+
+[tool.poe.tasks.mypy]
+cmd = "mypy src/"
+
+[tool.poe.tasks.ruff]
+cmd = "ruff check --verbose src/"
+
+[tool.poe.tasks.black]
+cmd = "black --check --verbose src/"
 
 [tool.poe.tasks.clean]
 cmd = """
@@ -57,7 +70,11 @@ cmd = """
 shell = """
   docker build . --file Dockerfile --tag rss2jext && \
   docker container rm rss2jext; \
-  docker run --env-file ./.env --volume './data:/app/data' --name rss2jext rss2jext
+  docker run \
+    --env-file ./.env \
+    --volume './data:/app/data' \
+    --name rss2jext \
+    rss2jext
 """
 
 # Running docker with `--volume` will chown any new files in data/ to root:root

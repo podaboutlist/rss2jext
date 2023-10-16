@@ -1,4 +1,4 @@
-name: Lint Python
+name: Linting
 
 on: [push, pull_request]
 
@@ -9,7 +9,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
-        poetry-version: ["1.6.1"]
     steps:
       - uses: actions/checkout@v4
 
@@ -18,31 +17,30 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v2
-        with:
-          poetry-version: ${{ matrix.poetry-version }}
+      - name: Get full Python version
+        id: full-python-version
+        run: echo version=$(python -c "import sys; print('-'.join(str(v) for v in sys.version_info))") >> $GITHUB_OUTPUT
 
-      - name: Configure Poetry to use local virtualenv
-        run: |
-          poetry config virtualenvs.create true --local
-          poetry config virtualenvs.in-project true --local
+      - name: Get pip cache dir
+        id: pip-cache
+        run: echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
-      - name: Cache local virtualenv
+      - name: Set up cache
         uses: actions/cache@v3
+        id: cache
         with:
-          path: ./.venv
-          key: venv-${{ hashFiles('poetry.lock') }}
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: pip-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/.requirements.txt') }}
+          restore-keys: pip-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-
 
-      - name: Install dependencies
-        run: poetry install --no-root --no-directory
+      - run: pip install -r ./.github/workflows/.requirements.txt
 
       # May need to set up mypy.ini for this to work properly
-      - name: MyPy
-        run: poetry run mypy ./src
+      - name: Run mypy
+        run: poe mypy
 
-      - name: Ruff
-        run: poetry run ruff check --output-format github src/
+      - name: Run ruff
+        run: poe ruff
 
-      - name: Black
-        run: poetry run black --check src/
+      - name: Run black
+        run: poe black
