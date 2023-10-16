@@ -24,8 +24,7 @@ repos:
         ]
       - id: poetry-export
         args: [
-          "--without=optional",
-          "--with=dev",
+          "--with=dev,optional",
           "-f", "requirements.txt",
           "-o", "./.github/workflows/.requirements.txt"
         ]
