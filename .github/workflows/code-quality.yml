@@ -36,24 +36,18 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./.venv
-          key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
+          key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ matrix.poetry-version }}-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install project dependencies
-        run: poetry install --without dev --no-root --no-directory
+        run: poetry install --with=dev,optional --no-root --no-directory
 
       - name: Black
-        uses: psf/black@stable
-        with:
-          options: "--check --verbose"
-          src: "./src"
+        run: poetry run poe black
 
       - name: Ruff
-        uses: chartboost/ruff-action@v1
-        with:
-          args: "--config ./pyproject.toml"
-          src: "./src"
+        run: poetry run poe ruff
 
-  mypy:
+  test:
     strategy:
       fail-fast: true
       matrix:
@@ -86,12 +80,10 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./.venv
-          key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
+          key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ matrix.poetry-version }}-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install project dependencies
-        run: poetry install --with=dev --no-root --no-directory
+        run: poetry install --with=dev,optional --no-root --no-directory
 
       - name: MyPy
-        uses: jpetrucciani/mypy-check@master
-        with:
-          path: './src'
+        run: poetry run poe mypy
