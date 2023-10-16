@@ -71,7 +71,7 @@ def download_mp3(url: str):
 
     req.raise_for_status()
 
-    with open(os.path.join(__cwd__, "data", "out", "episode.mp3"), "wb") as outfile:
+    with open(os.path.join(__cwd__, "data", "tmp", "episode.mp3"), "wb") as outfile:
         # not sure if there's a better value for chunk_size
         for chunk in req.iter_content(chunk_size=1024):
             outfile.write(chunk)
@@ -87,7 +87,7 @@ def mp3_to_ogg(infile: str, verbose=False):
         .option("y")
         .input(infile)
         .output(
-            os.path.join(__cwd__, "data", "out", "episode.ogg"),
+            os.path.join(__cwd__, "data", "tmp", "episode.ogg"),
             {"codec:a": "libvorbis", "qscale:a": 2, "ar": 44100, "ac": 1},
         )
     )
