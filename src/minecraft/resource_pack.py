@@ -15,7 +15,7 @@ class ResourcePack:
 
     __pack_format: int = None
     __pack_description: str = None
-    __input_dir: str = None
+    __data_dir: str = None
     __output_file: str = None
 
     def __init__(
@@ -23,13 +23,13 @@ class ResourcePack:
         *,
         pack_version: int,
         pack_description: str,
-        input_dir: str,
+        data_dir: str,
         output_file: str,
     ) -> None:
         """Provide pack metadata for building."""
         self.__pack_format = self.validate_pack_version(pack_version)
         self.__pack_description = pack_description
-        self.__input_dir = input_dir
+        self.__data_dir = data_dir
         self.__output_file = output_file
 
         self.validate_pack_icon()
@@ -42,12 +42,15 @@ class ResourcePack:
 
         return output
 
+    def __clean_tmp(self):
+        shutil.rmtree(os.path.join(self.__data_dir, "tmp", "resourcepack"))
+
     def validate_pack_icon(self) -> str | None:
         """Check if pack.png exists.
 
         If it isn't a 64x64px PNG, raise an exception.
         """
-        icon_path = os.path.join(self.__input_dir, "pack.png")
+        icon_path = os.path.join(self.__data_dir, "pack.png")
 
         if not os.path.exists(icon_path):
             return None
@@ -74,12 +77,15 @@ class ResourcePack:
 
     def build(self, *, verbose=False):
         """Create resource pack using template files."""
-        tmp_dir = os.path.join(self.__input_dir, "tmp")
+        # Clean up any previous data to prevent FileExistsError
+        self.__clean_tmp()
+
+        tmp_dir = os.path.join(self.__data_dir, "tmp")
         build_dir = os.path.join(tmp_dir, "resourcepack")
-        template_dir = os.path.join(self.__input_dir, "templates", "resourcepack")
+        template_dir = os.path.join(self.__data_dir, "templates", "resourcepack")
 
         episode_ogg = os.path.join(tmp_dir, "episode.ogg")
-        out_zip = os.path.join(self.__input_dir, "out", self.__output_file)
+        out_zip = os.path.join(self.__data_dir, "out", self.__output_file)
 
         # data/templates/resourcepack -> data/tmp/resourcepack
         shutil.copytree(template_dir, build_dir)
@@ -111,4 +117,4 @@ class ResourcePack:
         )
 
         # 3) zip output
-        shutil.make_archive(out_zip, "zip", root_dir=build_dir, verbose=verbose)
+        return shutil.make_archive(out_zip, "zip", root_dir=build_dir, verbose=verbose)

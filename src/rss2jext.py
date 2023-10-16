@@ -1,7 +1,7 @@
 import json
 import os
 
-# import re
+import argparse
 import requests
 from dotenv import load_dotenv
 from ffmpeg import FFmpeg, Progress
@@ -103,10 +103,10 @@ def mp3_to_ogg(infile: str, verbose=False) -> str:
         )
     )
 
-    # @ffmpeg.on("progress")
-    # def on_progress(progress: Progress) -> None:
-    #     if verbose:
-    #         print(f"[ffmpeg] {progress}")
+    @ffmpeg.on("progress")
+    def on_progress(progress: Progress) -> None:
+        if verbose:
+            print(f"[ffmpeg] {progress}")
 
     ffmpeg.execute()
 
@@ -115,6 +115,14 @@ def mp3_to_ogg(infile: str, verbose=False) -> str:
 
 def main() -> None:
     load_dotenv()
+
+    parser = argparse.ArgumentParser(
+        prog="rss2jext",
+        description="Listen to the latest episode a podcast in Minecraft!",
+    )
+    parser.add_argument("--skip-download", action="store_true")
+    parser.add_argument("--skip-encode", action="store_true")
+    args = parser.parse_args()
 
     episode = rss_latest_episode(os.getenv("RSS_URL"))
     servers = load_servers()
@@ -126,27 +134,32 @@ def main() -> None:
 
     print(f"[RSS] Latest episode URL: {ep_url}")
 
-    print("[RSS] Downloading episode mp3...")
+    if args.skip_download:
+        print("[mp3] Not downloading the episode sue to --skip-download")
+    else:
+        print("[RSS] Downloading episode mp3...")
+        mp3_file = download_mp3(ep_url)
+        print("[RSS] Finished downloading episode file!")
 
-    # mp3_file = download_mp3(ep_url)
-    mp3_file = os.path.join(__data_dir__, "tmp", "episode.mp3")
+    if args.skip_encode:
+        print("[ffmpeg] Skipping mp3 -> ogg encoding due to --skip-encode")
+    else:
+        print(f"[ffmpeg] encoding {mp3_file} -> ogg")
+        ogg_file = mp3_to_ogg(mp3_file)
+        print(f"[ffmpeg] done: {ogg_file}")
 
-    print("[RSS] Finished downloading episode file!")
-
-    print(f"[ffmpeg] encoding {mp3_file} -> ogg")
-    # ogg_file = mp3_to_ogg(mp3_file)
-    ogg_file = os.path.join(__data_dir__, "tmp", "episode.ogg")
-    print(f"[ffmpeg] done: {ogg_file}")
-
+    print("[minecraft] Initializing ResourcePack...")
     rp = ResourcePack(
         pack_version=18,
         pack_description="The latest episode of Podcast About List",
-        input_dir=__data_dir__,
+        data_dir=__data_dir__,
         # shutil.make_archive appends .zip already
         output_file=os.path.join(__data_dir__, "out", "resourcepack"),
     )
 
-    rp.build()
+    print("[minecraft] Building resource pack...")
+    rp_filename = rp.build()
+    print(f"[minecraft] Resource pack built: {rp_filename}")
 
 
 if __name__ == "__main__":
