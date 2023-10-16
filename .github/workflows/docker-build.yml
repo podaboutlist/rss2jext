@@ -1,0 +1,17 @@
+name: Build Docker Image
+
+on: [push, pull_request]
+
+jobs:
+  docker_build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Docker Images
+        uses: ScribeMD/docker-cache@0.3.6
+        with:
+            key: docker-${{ runner.os }}-${{ hashFiles('**/Dockerfile') }}
+
+      - name: Build Docker image
+        run: docker build . --file Dockerfile --tag rss2jext:$(date +%s)
