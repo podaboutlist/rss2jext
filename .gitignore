@@ -1,6 +1,8 @@
 ### Temporary files
-src/data/out/*
-!src/data/out/.gitkeep
+data/out/*
+data/tmp/*
+!data/out/.gitkeep
+!data/tmp/.gitkeep
 
 ### Docker / Environment files
 .env

@@ -9,13 +9,16 @@ from rss_parser import Parser
 from rss_parser.models.item import Item
 from rss_parser.models.types.tag import Tag
 
-from pterodactyl.api import Client
+from minecraft import ResourcePack
+from pterodactyl import Client
+
+__version__ = "1.0.0"
 
 __cwd__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 __data_dir__ = os.path.realpath(os.path.join(__cwd__, "../data"))
 
 # TODO: Pull version string from pyproject.toml
-USER_AGENT = "rss2jext/1.0.0"
+USER_AGENT = f"rss2jext/{__version__}"
 
 
 def load_servers() -> dict:
@@ -125,13 +128,25 @@ def main() -> None:
 
     print("[RSS] Downloading episode mp3...")
 
-    mp3_file = download_mp3(ep_url)
+    # mp3_file = download_mp3(ep_url)
+    mp3_file = os.path.join(__data_dir__, "tmp", "episode.mp3")
 
     print("[RSS] Finished downloading episode file!")
 
     print(f"[ffmpeg] encoding {mp3_file} -> ogg")
-    ogg_file = mp3_to_ogg(mp3_file)
+    # ogg_file = mp3_to_ogg(mp3_file)
+    ogg_file = os.path.join(__data_dir__, "tmp", "episode.ogg")
     print(f"[ffmpeg] done: {ogg_file}")
+
+    rp = ResourcePack(
+        pack_version=18,
+        pack_description="The latest episode of Podcast About List",
+        input_dir=__data_dir__,
+        # shutil.make_archive appends .zip already
+        output_file=os.path.join(__data_dir__, "out", "resourcepack"),
+    )
+
+    rp.build()
 
 
 if __name__ == "__main__":

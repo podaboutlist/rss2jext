@@ -4,6 +4,10 @@ import os
 import requests
 from dotenv import load_dotenv
 
+# TODO: resolve circular import crap
+# from . import __version__
+__version__ = "1.0.0"
+
 DEFAULT_TIMEOUT = 1000
 
 
@@ -14,9 +18,9 @@ class Client:
     Handles requests to anything under /api/client
     """
 
-    __api_key = None
-    __panel_url = None
-    __user_agent = None
+    __api_key: str = None
+    __panel_url: str = None
+    __user_agent: str = None
 
     headers = {
         "Accept": "application/json",
@@ -25,7 +29,7 @@ class Client:
         "User-Agent": None,
     }
 
-    def __init__(self, user_agent="rss2jext") -> None:
+    def __init__(self, user_agent=f"pteropy/{__version__}") -> None:
         """Load values directly from the environment."""
         load_dotenv()
 

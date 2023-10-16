@@ -12,6 +12,7 @@ python-dotenv = "1.0.0"
 requests = "^2.31.0"
 rss-parser = "^1.1.1"
 python-ffmpeg = "^2.0.4"
+pypng = "^0.20220715.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.9.1"
@@ -23,11 +24,15 @@ types-requests = "^2.31.0.9"
 [tool.poetry.group.optional.dependencies]
 poethepoet = "^0.24.1"
 
+[tool.poetry_bumpversion.file."src/__init__.py"]
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
+
 # Ruff ------------------------------------------------------------------------
 
 [tool.ruff]
 select = ["B", "D", "E", "F", "I", "N", "S", "W", "UP", "TCH"]
-ignore = ["D103", "D211", "D213", "D400"]
+ignore = ["D102", "D103", "D211", "D213", "D400"]
 line-length = 88
 target-version = "py311"
 src = ["src"]
