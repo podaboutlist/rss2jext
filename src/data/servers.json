@@ -1,0 +1,24 @@
+{
+    "velocity": {
+        "id": "abcdefg",
+        "command_delay": 1,
+        "commands": [
+            "vrp reload"
+        ]
+    },
+    "smp": {
+        "id": "hijklmnop",
+        "command_delay": 1,
+        "commands": [
+            "wrp reload",
+            "jext",
+            "tellraw @a [\"[\",{\"text\":\"RSS\",\"color\":\"light_purple\"},\"] A new episode of Podcast About List was just released!\"]",
+            "tellraw @a [\"[\",{\"text\":\"RSS\",\"color\":\"light_purple\"},\"] Reconnect to the server and use the command \",{\"text\":\"/paldisc\",\"color\":\"aqua\"},\" to listen on a jukebox!\"]"
+        ]
+    },
+    "creative": {
+        "id": "qrstuv",
+        "command_delay": 1,
+        "commands_from": "smp"
+    }
+}

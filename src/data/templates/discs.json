@@ -1,0 +1,16 @@
+[
+    {
+        "title": "%EPISODE_TITLE%",
+        "author": "%PODCAST_NAME%",
+        "duration": "%DISC_DURATION%",
+        "disc-namespace": "music_disc.latestpodepisode",
+        "model-data": 1,
+        "creeper-drop": false,
+        "lores": [
+            "%LORE_LINE_1%",
+            "%LORE_LINE_2%"
+        ],
+        "loot-tables": [],
+        "fragment-loot-tables": []
+    }
+]

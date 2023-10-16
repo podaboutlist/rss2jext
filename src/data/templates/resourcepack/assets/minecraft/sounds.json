@@ -1,0 +1,8 @@
+{
+    "music_disc.latestpodepisode": {
+        "sounds": [{
+            "name": "records/latestpodepisode",
+            "stream": true
+        }]
+    }
+}
