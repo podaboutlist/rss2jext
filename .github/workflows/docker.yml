@@ -11,6 +11,7 @@ jobs:
       - name: Lint Dockerfile
         uses: hadolint/hadolint-action@master
         with:
+          verbose: true
           dockerfile: "Dockerfile"
 
   build:
