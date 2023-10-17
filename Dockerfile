@@ -3,13 +3,13 @@ FROM python:3.11-alpine
 #ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=true
 
-RUN apk update && apk add ffmpeg
+RUN apk add --no-cache ffmpeg==6.0-r15
 
 WORKDIR /app
 
 COPY requirements.txt .
 
-RUN [ "python3", "-m", "pip", "install", "-r", "requirements.txt" ]
+RUN [ "python3", "-m", "pip", "install", "--no-cache-dir", "-r", "requirements.txt" ]
 
 COPY . .
 
