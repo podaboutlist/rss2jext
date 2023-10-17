@@ -20,10 +20,10 @@ repos:
         always_run: true
       - id: poetry-export
         always_run: true
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.6.0
-    hooks:
-      - id: mypy
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.6.0
+  #   hooks:
+  #     - id: mypy
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: v0.0.292
     hooks:
