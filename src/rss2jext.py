@@ -1,7 +1,7 @@
+import argparse
 import json
 import os
 
-import argparse
 import requests
 from dotenv import load_dotenv
 from ffmpeg import FFmpeg, Progress
@@ -93,13 +93,18 @@ def mp3_to_ogg(infile: str, verbose=False) -> str:
     # ffmpeg flags to reproduce the format of vanilla records appear to be
     #   -c:a libvorbis -q:a 2 -ar 44100 -ac 1
 
+    aq = os.getenv("AUDIO_QUALITY")
+
+    if not aq:
+        aq = 0
+
     ffmpeg = (
         FFmpeg()
         .option("y")
         .input(infile)
         .output(
             outfile,
-            {"codec:a": "libvorbis", "qscale:a": 2, "ar": 44100, "ac": 1},
+            {"codec:a": "libvorbis", "qscale:a": aq, "ar": 44100, "ac": 1},
         )
     )
 
