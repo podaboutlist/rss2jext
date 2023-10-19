@@ -6,7 +6,13 @@ import shutil
 
 import png
 
-VALID_PACK_VERSIONS = [4, 5, 6, 7, 8, 9, 10, 12, 15, 18]
+VALID_PACK_VERSIONS = [
+    8,  # 1.18 - 1.18.2
+    9,  # 1.19 - 1.19.2
+    12,  # 1.19.3
+    15,  # 1.20-1.20.1
+    18,  # 1.20.2
+]
 
 
 class ResourcePack:
@@ -85,12 +91,12 @@ class ResourcePack:
         template_dir = os.path.join(self.__data_dir, "templates", "resourcepack")
 
         episode_ogg = os.path.join(tmp_dir, "episode.ogg")
-        out_zip = os.path.join(self.__data_dir, "out", self.__output_file)
+        out_zip = os.path.join(
+            self.__data_dir, "out", f"{self.__output_file}_{self.__pack_format}"
+        )
 
         # data/templates/resourcepack -> data/tmp/resourcepack
         shutil.copytree(template_dir, build_dir)
-
-        # build_dir = os.path.join(tmp_dir, os.path.basename(template_dir))
 
         # 1) Populate mcmeta template
         with open(

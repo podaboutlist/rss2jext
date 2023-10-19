@@ -5,6 +5,7 @@ import os
 import requests
 from dotenv import load_dotenv
 from ffmpeg import FFmpeg, Progress
+from mutagen.oggvorbis import OggVorbis
 from rss_parser import Parser
 from rss_parser.models.item import Item
 from rss_parser.models.types.tag import Tag
@@ -28,16 +29,16 @@ def load_servers() -> dict:
         return json.load(servers_json)
 
 
-def rss_latest_episode(feed_url: str) -> Tag[Item]:
+def rss_feed(feed_url: str):
     print(f"[RSS] Downloading feed from {feed_url}...")
 
-    # TODO: Validate RSS_URL
-    # TODO: Don't hardcode timeout value
     feed_req = requests.get(feed_url, timeout=1000, headers={"User-Agent": USER_AGENT})
     feed_req.raise_for_status()
 
-    rss = Parser.parse(feed_req.text)
+    return Parser.parse(feed_req.text)
 
+
+def rss_latest_episode(rss) -> Tag[Item]:
     print(f"[RSS] Feed language: {rss.channel.language}")
     print(f"[RSS] Feed version: {rss.version}")
 
@@ -87,16 +88,32 @@ def download_mp3(url: str) -> str:
         return outfile
 
 
-def mp3_to_ogg(infile: str, verbose=False) -> str:
+def mp3_to_ogg(infile: str, *, verbose=False) -> str:
     outfile = os.path.join(__data_dir__, "tmp", "episode.ogg")
     # Re-encode the audio file using ffmpeg
     # ffmpeg flags to reproduce the format of vanilla records appear to be
     #   -c:a libvorbis -q:a 2 -ar 44100 -ac 1
 
-    aq = os.getenv("AUDIO_QUALITY")
+    # TODO: Check if we can pass None to options that don't take an argument (-vn)
+    output_settings = {
+        "vn": None,
+        "codec:a": "libvorbis",
+        "qscale:a": 2,
+        "ar": 44100,
+        "ac": 1,
+    }
 
-    if not aq:
-        aq = 0
+    if os.getenv("AUDIO_QUALITY"):
+        output_settings["qscale:a"] = int(os.getenv("AUDIO_QUALITY"))
+        print(f"[ffmpeg] qscale:a set to {output_settings['qscale:a']}")
+
+    if os.getenv("AUDIO_SAMPLERATE"):
+        output_settings["ar"] = int(os.getenv("AUDIO_SAMPLERATE"))
+        print(f"[ffmpeg] audio sample rate set to {output_settings['ar']}")
+
+    if int(os.getenv("AUDIO_NORMALIZE")):
+        output_settings["af"] = "loudnorm"
+        print("[ffmpeg] loudness normalization enabled.")
 
     ffmpeg = (
         FFmpeg()
@@ -104,7 +121,7 @@ def mp3_to_ogg(infile: str, verbose=False) -> str:
         .input(infile)
         .output(
             outfile,
-            {"codec:a": "libvorbis", "qscale:a": aq, "ar": 44100, "ac": 1},
+            output_settings,
         )
     )
 
@@ -118,6 +135,29 @@ def mp3_to_ogg(infile: str, verbose=False) -> str:
     return outfile
 
 
+def build_packs(versions: list, *, pack_description: str):
+    for rp_version in versions:
+        print(f"[minecraft] Building resourcepack version {rp_version}...")
+
+        rp = ResourcePack(
+            pack_version=rp_version,
+            pack_description=f"Podcast About List {pack_description}",
+            data_dir=__data_dir__,
+            # shutil.make_archive appends .zip already
+            output_file=os.path.join(
+                __data_dir__, "out", str(os.getenv("RESOURCE_PACK_NAME"))
+            ),
+        )
+
+        rp_filename = rp.build()
+        print(f"[minecraft] Resource pack built: {rp_filename}")
+
+
+def build_jext_config(*, oggfile, rss_feed):
+    # TODO: write this. Taco Bell time yum!!!
+    pass
+
+
 def main() -> None:
     load_dotenv()
 
@@ -129,8 +169,10 @@ def main() -> None:
     parser.add_argument("--skip-encode", action="store_true")
     args = parser.parse_args()
 
-    episode = rss_latest_episode(os.getenv("RSS_URL"))
-    servers = load_servers()
+    feed = rss_feed(os.getenv("RSS_URL"))
+    episode = rss_latest_episode(feed)
+
+    ptero_servers = load_servers()
 
     print(f"[RSS] Latest episode Title: {episode.title}")
     print(f"[RSS] Latest episode GUID: {episode.guid}")
@@ -153,18 +195,9 @@ def main() -> None:
         ogg_file = mp3_to_ogg(mp3_file)
         print(f"[ffmpeg] done: {ogg_file}")
 
-    print("[minecraft] Initializing ResourcePack...")
-    rp = ResourcePack(
-        pack_version=18,
-        pack_description="The latest episode of Podcast About List",
-        data_dir=__data_dir__,
-        # shutil.make_archive appends .zip already
-        output_file=os.path.join(__data_dir__, "out", "resourcepack"),
-    )
+    build_packs([15, 18], pack_description=episode.title)
 
-    print("[minecraft] Building resource pack...")
-    rp_filename = rp.build()
-    print(f"[minecraft] Resource pack built: {rp_filename}")
+    audio_duration = OggVorbis(ogg_file).info.length
 
 
 if __name__ == "__main__":

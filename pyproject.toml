@@ -13,6 +13,7 @@ requests = "^2.31.0"
 rss-parser = "^1.1.1"
 python-ffmpeg = "^2.0.4"
 pypng = "^0.20220715.0"
+mutagen = "^1.47.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.9.1"
