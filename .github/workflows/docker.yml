@@ -1,6 +1,8 @@
 name: Docker
 
-on: [push, pull_request, workflow_call]
+# This workflow is called from docker-publish.yml on push
+# todo: make this run on pushes NOT to main
+on: [pull_request, workflow_call]
 
 jobs:
   lint:
