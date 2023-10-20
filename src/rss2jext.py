@@ -35,7 +35,7 @@ def first_run_setup():
     These files will be accessible on the host machine from the Docker image.
     """
     print("[first run] copying res/ to data/")
-    shutil.copytree(__resource_dir__, __data_dir__)
+    shutil.copytree(__resource_dir__, __data_dir__, dirs_exist_ok=True)
 
 
 def load_servers() -> dict:
