@@ -5,6 +5,8 @@ on:
   workflow_call:
   # Don't run on pushes to main because we will be called from docker-publish.yml
   push:
+    paths:
+      - '**.py'
     branches-ignore:
       - main
 
