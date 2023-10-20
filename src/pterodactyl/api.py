@@ -1,5 +1,6 @@
 """Wrapper for the Pterodactyl REST API."""
 import os
+from urllib.parse import quote_plus
 
 import requests
 from dotenv import load_dotenv
@@ -11,7 +12,7 @@ __version__ = "1.0.0"
 DEFAULT_TIMEOUT = 1000
 
 
-class Client:
+class PterodactylClient:
 
     """Wrapper class for the Pterodactyl Client API.
 
@@ -22,6 +23,8 @@ class Client:
     __panel_url: str = None
     __user_agent: str = None
 
+    __endpont: str = None
+
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -29,13 +32,18 @@ class Client:
         "User-Agent": None,
     }
 
-    def __init__(self, user_agent=f"pteropy/{__version__}") -> None:
+    def __init__(
+        self,
+        *,
+        api_key: str = None,
+        panel_url: str = None,
+        user_agent: str = f"pteropy/{__version__}",
+    ) -> None:
         """Load values directly from the environment."""
         load_dotenv()
 
-        # TODO: Implement validation of API key/panel URL
-        self.__api_key = os.getenv("PTERODACTYL_API_KEY")
-        self.__panel_url = os.getenv("PTERODACTYL_URL")
+        self.__api_key = self.__validate_api_key(api_key=api_key)
+        self.__panel_url = self.__validate_panel_url(panel_url=panel_url)
 
         self.__user_agent = user_agent
 
@@ -43,7 +51,26 @@ class Client:
         self.headers["Authorization"] = f"Bearer {self.__api_key}"
         self.headers["User-Agent"] = self.__user_agent
 
-    def server_details(self, server_id: str, timeout=DEFAULT_TIMEOUT) -> dict:
+    def __validate_api_key(self, api_key: str = None):
+        if not api_key:
+            api_key = str(os.getenv("PTERODACTYL_API_KEY"))
+
+        if api_key.startswith("ptlc_"):
+            return api_key
+
+        raise ValueError("Pterodactyl API key is invalid!")
+
+    def __validate_panel_url(self, panel_url: str = None):
+        if not panel_url:
+            panel_url = str(os.getenv("PTERODACTYL_URL"))
+
+        # TODO: Better URL validation
+        if panel_url.startswith("http"):
+            return panel_url
+
+        raise ValueError("Pterodactyl URL is invalid!")
+
+    def server_details(self, *, server_id: str, timeout=DEFAULT_TIMEOUT) -> dict:
         """Get the details of a server.
 
         Easier than checking all servers that belong to a user.
@@ -58,9 +85,11 @@ class Client:
         # the case of bad JSON response data.
         return req.json()
 
-    def has_permission(self, server_id: str, permission_node: str) -> bool:
+    def has_permission(self, *, server_id: str, permission_node: str) -> bool:
         """Check if the current user (based on API key) has a permission node."""
-        user_permissions = self.server_details(server_id)["meta"]["user_permissions"]
+        user_permissions = self.server_details(server_id=server_id)["meta"][
+            "user_permissions"
+        ]
 
         # TODO: Figure out if we need to handle permission nodes like "control.*"
         return "*" in user_permissions or permission_node in user_permissions
@@ -70,7 +99,7 @@ class Client:
 
         There is currently no API endpoint to check power state, only to set it.
         """
-        details = self.server_details(server_id)
+        details = self.server_details(server_id=server_id)
 
         # Multiple things indicate an "offline" power state, namely:
         #   - details.attributes.is_suspended == True
@@ -85,10 +114,10 @@ class Client:
         # state than sending a command and checking for a 502 response.
         # The API docs show no indication of GET /power, only POST /power.
         # For now we'll just check for a 502.
-        return self.send_command(server_id, "ping")
+        return self.send_command(server_id=server_id, command="ping")
 
     def send_command(
-        self, server_id: str, command: str, timeout=DEFAULT_TIMEOUT
+        self, *, server_id: str, command: str, timeout: int = DEFAULT_TIMEOUT
     ) -> bool:
         """Send a command to a server hosted via the panel."""
         endpoint = f"{self.__panel_url}/api/client/servers/{server_id}/command"
@@ -108,3 +137,23 @@ class Client:
 
         # API request does not return any data besides a success code.
         return True
+
+    def write_file_contents(
+        self,
+        *,
+        server_id: str,
+        filename: str,
+        contents,
+        content_type: str = "text/plain",
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> None:
+        endpoint = f"{self.__panel_url}/api/client/servers/{server_id}/files/write"
+
+        fileparam = quote_plus(filename)
+        endpoint = f"{endpoint}?file={fileparam}"
+
+        h = self.headers
+        h["Content-Type"] = content_type
+
+        req = requests.post(endpoint, headers=h, data=contents, timeout=timeout)
+        req.raise_for_status()
