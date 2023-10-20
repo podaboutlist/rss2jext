@@ -1,0 +1,36 @@
+name: 'Publish release image to ghcr.io'
+on:
+  # publish on releases, e.g. v2.1.13 (image tagged as "2.1.13")
+  # NB: "v" prefix is removed
+  release:
+    types:
+      - published
+
+  # publish "latest" tag on pushes to the main branch
+  push:
+    branches:
+      - main
+
+jobs:
+  code_quality:
+    uses: './.github/workflows/code-quality.yml'
+
+  build_dockerfile:
+    uses: './.github/workflows/docker.yml'
+
+  publish_release:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    # TODO: Re-enable code_quality after we fix ruff etc.
+    # needs: [code_quality, build_dockerfile]
+    needs: build_dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and publish a Docker image for ${{ github.repository }}
+        uses: macbre/push-to-ghcr@master
+        with:
+          image_name: ${{ github.repository }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
