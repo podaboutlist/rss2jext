@@ -2,6 +2,7 @@ import argparse
 import json
 import math
 import os
+import shutil
 
 import requests
 from dotenv import load_dotenv
@@ -15,10 +16,19 @@ from rss_helper import RSSHelper
 __version__ = "1.0.0"
 
 __cwd__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+__resource_dir__ = os.path.realpath(os.path.join(__cwd__, "../res"))
 __data_dir__ = os.path.realpath(os.path.join(__cwd__, "../data"))
 
 # TODO: Pull version string from pyproject.toml
 USER_AGENT = f"rss2jext/{__version__}"
+
+
+def first_run_setup():
+    """Copy res/ to data/ recursively.
+
+    These files will be accessible on the host machine from the Docker image.
+    """
+    shutil.copytree(__resource_dir__, __data_dir__)
 
 
 def load_servers() -> dict:
@@ -114,6 +124,11 @@ def build_packs(versions: list, *, pack_description: str):
 
 def main() -> None:
     load_dotenv()
+
+    # Copy required file structure to data/ so it can be accessed on the host
+    # machine when running in a Docker container
+    if not os.path.isdir(__data_dir__):
+        first_run_setup()
 
     parser = argparse.ArgumentParser(
         prog="rss2jext",
