@@ -16,8 +16,14 @@ from rss_helper import RSSHelper
 __version__ = "1.0.0"
 
 __cwd__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
 __resource_dir__ = os.path.realpath(os.path.join(__cwd__, "../res"))
+
 __data_dir__ = os.path.realpath(os.path.join(__cwd__, "../data"))
+
+__out_dir__ = os.path.join(__data_dir__, "out")
+__templates_dir__ = os.path.join(__data_dir__, "templates")
+__tmp_dir__ = os.path.join(__data_dir__, "tmp")
 
 # TODO: Pull version string from pyproject.toml
 USER_AGENT = f"rss2jext/{__version__}"
@@ -126,10 +132,12 @@ def build_packs(versions: list, *, pack_description: str):
 def main() -> None:
     load_dotenv()
 
-    # Copy required file structure to data/ so it can be accessed on the host
-    # machine when running in a Docker container
-    if not os.path.isdir(__data_dir__):
-        first_run_setup()
+    # ./data needs to exist when using a bind mount with docker so we check
+    # subdirectories as well
+    for dir_to_check in [__data_dir__, __out_dir__, __templates_dir__, __tmp_dir__]:
+        if not os.path.isdir(dir_to_check):
+            first_run_setup()
+            break
 
     parser = argparse.ArgumentParser(
         prog="rss2jext",
