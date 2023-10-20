@@ -1,8 +1,12 @@
 name: Code Quality
 
-# This workflow is called from docker-publish.yml on push
-# todo: make this run on pushes NOT to main
-on: [pull_request, workflow_call]
+on:
+  pull_request:
+  workflow_call:
+  # Don't run on pushes to main because we will be called from docker-publish.yml
+  push:
+    branches-ignore:
+      - main
 
 jobs:
   lint:
