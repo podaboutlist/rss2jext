@@ -3,6 +3,7 @@ import json
 import math
 import os
 import shutil
+from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
@@ -10,7 +11,7 @@ from ffmpeg import FFmpeg, Progress
 from mutagen.oggvorbis import OggVorbis
 
 from minecraft import ResourcePack, populate_discs_json
-from pterodactyl import Client
+from pterodactyl import PterodactylClient
 from rss_helper import RSSHelper
 
 __version__ = "1.0.0"
@@ -46,7 +47,7 @@ def load_servers() -> dict:
 
 
 # TODO: Maybe add an extra argument to this that lets us specify where to save the file
-def download_mp3(url: str) -> str:
+def download_mp3(*, url: str, filename: str) -> str:
     # TODO: Don't hardcode timeout
     req = requests.get(
         url, headers={"User-Agent": USER_AGENT}, timeout=1000, stream=True
@@ -54,7 +55,7 @@ def download_mp3(url: str) -> str:
 
     req.raise_for_status()
 
-    outfile = os.path.join(__data_dir__, "tmp", "episode.mp3")
+    outfile = os.path.join(__tmp_dir__, f"{filename}.mp3")
 
     with open(outfile, "wb") as of:
         # not sure if there's a better value for chunk_size
@@ -65,10 +66,7 @@ def download_mp3(url: str) -> str:
 
 
 def mp3_to_ogg(infile: str, *, verbose=False) -> str:
-    outfile = os.path.join(__data_dir__, "tmp", "episode.ogg")
-    # Re-encode the audio file using ffmpeg
-    # ffmpeg flags to reproduce the format of vanilla records appear to be
-    #   -c:a libvorbis -q:a 2 -ar 44100 -ac 1
+    outfile = os.path.join(__tmp_dir__, f"{Path(infile).stem}.ogg")
 
     # TODO: Check if we can pass None to options that don't take an argument (-vn)
     output_settings = {
@@ -106,12 +104,13 @@ def mp3_to_ogg(infile: str, *, verbose=False) -> str:
         if verbose:
             print(f"[ffmpeg] {progress}")
 
+    print("[ffmpeg] encoding...")
     ffmpeg.execute()
 
     return outfile
 
 
-def build_packs(versions: list, *, pack_description: str):
+def build_packs(*, basename: str, versions: list, pack_description: str):
     for rp_version in versions:
         print(f"[minecraft] Building resourcepack version {rp_version}...")
 
@@ -120,12 +119,10 @@ def build_packs(versions: list, *, pack_description: str):
             pack_description=f"Podcast About List {pack_description}",
             data_dir=__data_dir__,
             # shutil.make_archive appends .zip already
-            output_file=os.path.join(
-                __data_dir__, "out", str(os.getenv("RESOURCE_PACK_NAME"))
-            ),
+            output_file=os.path.join(__out_dir__, str(os.getenv("RESOURCE_PACK_NAME"))),
         )
 
-        rp_filename = rp.build()
+        rp_filename = rp.build(basename=basename)
         print(f"[minecraft] Resource pack built: {rp_filename}")
 
 
@@ -147,6 +144,7 @@ def main() -> None:
     parser.add_argument("--skip-encode", action="store_true")
     args = parser.parse_args()
 
+    ptero_client = PterodactylClient()
     ptero_servers = load_servers()
 
     rss_feed = RSSHelper(os.getenv("RSS_URL"), user_agent=USER_AGENT)
@@ -155,7 +153,7 @@ def main() -> None:
     print(f"[RSS] Latest episode Title: {latest_episode.title}")
     print(f"[RSS] Latest episode GUID: {latest_episode.guid}")
 
-    ep_url = rss_feed.episode_file_url(rss_feed.latest_episode())
+    ep_url = rss_feed.episode_file_url(latest_episode)
 
     print(f"[RSS] Latest episode URL: {ep_url}")
 
@@ -163,19 +161,23 @@ def main() -> None:
         print("[mp3] Not downloading the episode sue to --skip-download")
     else:
         print("[RSS] Downloading episode mp3...")
-        mp3_file = download_mp3(ep_url)
+        mp3_file = download_mp3(url=ep_url, filename=latest_episode.guid)
         print("[RSS] Finished downloading episode file!")
 
     if args.skip_encode:
         print("[ffmpeg] Skipping mp3 -> ogg encoding due to --skip-encode")
         # Try to assign a default value if we skip encoding
-        ogg_file = os.path.join(__data_dir__, "tmp", "episode.ogg")
+        ogg_file = os.path.join(__tmp_dir__, f"{latest_episode.guid}.ogg")
     else:
         print(f"[ffmpeg] encoding {mp3_file} -> ogg")
         ogg_file = mp3_to_ogg(mp3_file)
         print(f"[ffmpeg] done: {ogg_file}")
 
-    build_packs([15, 18], pack_description=latest_episode.title)
+    build_packs(
+        basename=latest_episode.guid,
+        versions=[15, 18],
+        pack_description=latest_episode.title,
+    )
 
     audio_duration = OggVorbis(ogg_file).info.length
     audio_duration = math.ceil(audio_duration)
@@ -183,7 +185,7 @@ def main() -> None:
     print(f"[ogg] file has a duration of {audio_duration} seconds")
 
     discs_json = populate_discs_json(
-        template_file=os.path.join(__data_dir__, "templates", "discs.json"),
+        template_file=os.path.join(__templates_dir__, "discs.json"),
         title=latest_episode.title,
         author=rss_feed.feed().channel.content.title,
         duration=audio_duration,
@@ -191,9 +193,17 @@ def main() -> None:
 
     print("[discs.json] writing discs.json")
     with open(
-        os.path.join(__data_dir__, "out", "discs.json"), "w", encoding="utf-8"
+        os.path.join(__out_dir__, "discs.json"), "w", encoding="utf-8"
     ) as discs_file:
         json.dump(discs_json, discs_file, allow_nan=False, indent=4)
+
+    # HACK: Gotta fix this to use servers.json > server["files"]["discs.json"]
+    print("[discs.json] uploading changes to Pterodactyl")
+    ptero_client.write_file_contents(
+        server_id="6351f579",
+        filename="/plugins/JukeboxExtendedReborn/discs.json",
+        contents=json.dumps(discs_json, allow_nan=False, indent=4),
+    )
 
 
 if __name__ == "__main__":

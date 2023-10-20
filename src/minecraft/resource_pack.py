@@ -81,7 +81,7 @@ class ResourcePack:
 
         return pv
 
-    def build(self, *, verbose=False):
+    def build(self, *, basename: str, verbose=False):
         """Create resource pack using template files."""
         # Clean up any previous data to prevent FileExistsError
         self.__clean_tmp()
@@ -90,7 +90,7 @@ class ResourcePack:
         build_dir = os.path.join(tmp_dir, "resourcepack")
         template_dir = os.path.join(self.__data_dir, "templates", "resourcepack")
 
-        episode_ogg = os.path.join(tmp_dir, "episode.ogg")
+        episode_ogg = os.path.join(tmp_dir, f"{basename}.ogg")
         out_zip = os.path.join(
             self.__data_dir, "out", f"{self.__output_file}_{self.__pack_format}"
         )
