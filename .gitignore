@@ -1,8 +1,5 @@
-### Temporary files
-data/out/*
-data/tmp/*
-!data/out/.gitkeep
-!data/tmp/.gitkeep
+### Data directory created by Docker image
+data/
 
 ### Docker / Environment files
 .env

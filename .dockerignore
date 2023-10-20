@@ -3,6 +3,4 @@
 !/LICENSE.txt
 !/requirements.txt
 !/src
-!/data/templates
-!/data/out/.gitkeep
-!/data/tmp/.gitkeep
+!/res
