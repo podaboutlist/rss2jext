@@ -13,7 +13,10 @@
             "jext",
             "tellraw @a [\"[\",{\"text\":\"RSS\",\"color\":\"light_purple\"},\"] A new episode of Podcast About List was just released!\"]",
             "tellraw @a [\"[\",{\"text\":\"RSS\",\"color\":\"light_purple\"},\"] Reconnect to the server and use the command \",{\"text\":\"/paldisc\",\"color\":\"aqua\"},\" to listen on a jukebox!\"]"
-        ]
+        ],
+        "files": {
+            "discs.json": "/plugins/JukeboxExtendedReborn/discs.json"
+        }
     },
     "creative": {
         "id": "qrstuv",
