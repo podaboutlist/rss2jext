@@ -18,6 +18,6 @@ COPY . .
 
 VOLUME [ "/app/data" ]
 
+# Fix for data directory on the host being owned by root instead of the current user
 USER $UID:$GID
-
 ENTRYPOINT [ "python3", "src/rss2jext.py" ]
