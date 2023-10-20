@@ -15,7 +15,7 @@ jobs:
   code_quality:
     uses: './.github/workflows/code-quality.yml'
 
-  build_dockerfile:
+  dockerfile:
     uses: './.github/workflows/docker.yml'
 
   publish_release:
@@ -24,8 +24,7 @@ jobs:
       packages: write
       contents: read
     # TODO: Re-enable code_quality after we fix ruff etc.
-    # needs: [code_quality, build_dockerfile]
-    needs: build_dockerfile
+    needs: [dockerfile]
     steps:
       - uses: actions/checkout@v4
 
